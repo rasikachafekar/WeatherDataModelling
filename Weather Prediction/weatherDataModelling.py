@@ -8,36 +8,36 @@ import math
 
 
 def getParamspdq(SomeSeries) :
-	p = d = q = range(0, 2)
-	pdq = list(itertools.product(p, d, q))
-	seasonal_pdq = [(x[0], x[1], x[2], 12) for x in list(itertools.product(p, d, q))]
-	print('Examples of parameter combinations for Seasonal ARIMA...')
-	print('SARIMAX: {} x {}'.format(pdq[1], seasonal_pdq[1]))
-	print('SARIMAX: {} x {}'.format(pdq[1], seasonal_pdq[2]))
-	print('SARIMAX: {} x {}'.format(pdq[2], seasonal_pdq[3]))
-	print('SARIMAX: {} x {}'.format(pdq[2], seasonal_pdq[4]))
+    p = d = q = range(0, 2)
+    pdq = list(itertools.product(p, d, q))
+    seasonal_pdq = [(x[0], x[1], x[2], 12) for x in list(itertools.product(p, d, q))]
+    print('Examples of parameter combinations for Seasonal ARIMA...')
+    print('SARIMAX: {} x {}'.format(pdq[1], seasonal_pdq[1]))
+    print('SARIMAX: {} x {}'.format(pdq[1], seasonal_pdq[2]))
+    print('SARIMAX: {} x {}'.format(pdq[2], seasonal_pdq[3]))
+    print('SARIMAX: {} x {}'.format(pdq[2], seasonal_pdq[4]))
 
-	warnings.filterwarnings("ignore")
-	aic = 10000000
+    warnings.filterwarnings("ignore")
+    aic = 10000000
 
-	for param in pdq:
-		for param_seasonal in seasonal_pdq:
-			try:
-				mod = sm.tsa.statespace.SARIMAX(SomeSeries,
-												order=param,
-												seasonal_order=param_seasonal,
-												enforce_stationarity=False,
-												enforce_invertibility=False)
+    for param in pdq:
+        for param_seasonal in seasonal_pdq:
+            try:
+                mod = sm.tsa.statespace.SARIMAX(SomeSeries,
+                                                order=param,
+                                                seasonal_order=param_seasonal,
+                                                enforce_stationarity=False,
+                                                enforce_invertibility=False)
 
-				results = mod.fit()
-				if(aic > results.aic):
-					aic = results.aic
-					params = (param,param_seasonal)
-				print('ARIMA{}x{}12 - AIC:{}'.format(param, param_seasonal, results.aic))
+                results = mod.fit()
+                if(aic > results.aic):
+                    aic = results.aic
+                    params = (param,param_seasonal)
+                print('ARIMA{}x{}12 - AIC:{}'.format(param, param_seasonal, results.aic))
 
-			except:
-				continue
-	return params
+            except:
+                continue
+    return params
 
 
 def get_model(params, SomeSeries, colString):
@@ -57,21 +57,24 @@ def get_model(params, SomeSeries, colString):
     pred = results.get_prediction(start=pd.to_datetime('2010-01-01'), dynamic=False)
     pred_ci = pred.conf_int()
 
-    ax = SomeSeries['2005':].plot(label='observed')
-    pred.predicted_mean.plot(ax=ax, label='One-step ahead Forecast', alpha=.7)
-
-    ax.fill_between(pred_ci.index,
-                    pred_ci.iloc[:, 0],
-                    pred_ci.iloc[:, 1], color='k', alpha=.2)
-
-    ax.set_xlabel('Date')
-    ax.set_ylabel(colString)
-    plt.legend()
+    # ax = SomeSeries['2005':].plot(label='observed')
+    # pred.predicted_mean.plot(ax=ax, label='One-step ahead Forecast', alpha=.7)
+    #
+    # ax.fill_between(pred_ci.index,
+    #                 pred_ci.iloc[:, 0],
+    #                 pred_ci.iloc[:, 1], color='k', alpha=.2)
+    #
+    # ax.set_xlabel('Date')
+    # ax.set_ylabel(colString)
+    # plt.legend()
 
     # plt.show()
 
     forecasted = pred.predicted_mean
     truth = SomeSeries['2010-01-01':]
+
+    print(truth)
+    print(forecasted)
 
     # Compute the mean square error
     rmse = math.sqrt(((forecasted - truth) ** 2).mean())
@@ -81,8 +84,8 @@ def get_model(params, SomeSeries, colString):
 df = pd.DataFrame()
 list_ = []
 for i in range(2001,2011):
-	tempDataframe = pd.read_csv("Datasets/"+ str(i) + ".csv", skiprows = 2, usecols = [0,1,2,3,4,7,9,14])
-	list_.append(tempDataframe)
+    tempDataframe = pd.read_csv("Datasets/"+ str(i) + ".csv", skiprows = 2, usecols = [0,1,2,3,4,7,9,14])
+    list_.append(tempDataframe)
 df = pd.concat(list_)
 
 #Splitting into 3 dataframes ghiDF, temperatureDF, windSpeedDF
@@ -135,23 +138,22 @@ del windSpeedDF['Minute']
 windSpeedSeries = windSpeedDF.groupby(['Date'])['Wind Speed'].mean()
 
 #Model prediction for GHI
-params_GHI = getParamspdq(ghiSeries)
-
-rmse = get_model(params_GHI,ghiSeries,"GHI")
+# params_GHI = getParamspdq(ghiSeries)
+# rmse = get_model(params_GHI,ghiSeries,"GHI")
+rmse = get_model(((1, 1, 1), (0, 1, 1, 12)),ghiSeries,"GHI")
 print('The Root Mean Squared Error of our forecasts for GHI with current model is {}'.format(round(rmse, 2)))
-
-
-
-# #Model prediction for Temperature
-params_Temperature = getParamspdq(temperatureSeries)
-
-rmse = get_model(params_Temperature,temperatureSeries,"Temperature")
-print('The Root Mean Squared Error of our forecasts for Temperature with current model is {}'.format(round(rmse, 2)))
 #
-# #Model prediction for Wind Speed
-params_Temperature = getParamspdq(windSpeedSeries)
+# #Model prediction for Temperature
+# params_Temperature = getParamspdq(temperatureSeries)
+# rmse = get_model(params_Temperature,temperatureSeries,"Temperature")
+rmse = get_model(((1, 0, 1), (0, 1, 1, 12)),temperatureSeries,"Temperature")
+print('The Root Mean Squared Error of our forecasts for Temperature with current model is {}'.format(round(rmse, 2)))
 
-rmse = get_model(params_Temperature,windSpeedSeries,"WindSpeed")
+# Model prediction for Wind Speed
+# params_WindSpeed = getParamspdq(windSpeedSeries)
+# print(params_WindSpeed)
+#rmse = get_model(params_WindSpeed,windSpeedSeries,"WindSpeed")
+rmse = get_model(((1, 0, 1), (0, 1, 1, 12)),windSpeedSeries,"WindSpeed")
 print('The Root Mean Squared Error of our forecasts for Temperature with current model is {}'.format(round(rmse, 2)))
 
 # pred_uc = results.get_forecast(steps = 500)
@@ -170,5 +172,8 @@ print('The Root Mean Squared Error of our forecasts for Temperature with current
 # plt.show()
 #print(ghiSeries.head(20))
 # line plot of dataset
-#ghiSeries.plot()
-#pyplot.show()
+ghiSeries.plot()
+plt.legend()
+# temperatureSeries.plot()
+# windSpeedSeries.plot()
+plt.show()
