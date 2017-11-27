@@ -6,6 +6,12 @@ import numpy as np
 import warnings
 import math
 
+def removeOutliers(SomeSeries):
+    mean = SomeSeries.mean()
+    sd = SomeSeries.std()
+    final_list = [x for x in SomeSeries if (x > mean - 2 * sd)]
+    final_list = [x for x in final_list if (x < mean + 2 * sd)]
+    return pd.Series(final_list)
 
 def getParamspdq(SomeSeries) :
     p = d = q = range(0, 2)
@@ -89,6 +95,7 @@ for i in range(2001,2011):
 df = pd.concat(list_)
 
 #Splitting into 3 dataframes ghiDF, temperatureDF, windSpeedDF
+#dfdshlfhdslkhfkldshflkdshflk
 ghiDF = df.iloc[:,0:6]
 
 temperatureDF = df.iloc[:,0:7]
@@ -113,48 +120,50 @@ del ghiDF['Minute']
 #calculating mean of GHI for each day and creating a panda series
 ghiSeries = ghiDF.groupby(['Date'])['GHI'].mean()
 
-#Concatenating Year, Month and Day columns to form one single column called Date
-temperatureDF['Date'] = temperatureDF['Year'].astype(str) + '-' + temperatureDF['Month'].astype(str) + '-' + temperatureDF['Day'].astype(str)
-temperatureDF['Date'] = pd.to_datetime(temperatureDF['Date'])
-del temperatureDF['Year']
-del temperatureDF['Month']
-del temperatureDF['Day']
-del temperatureDF['Hour']
-del temperatureDF['Minute']
+ghiSeries = removeOutliers(ghiSeries)
 
-#calculating mean of GHI for each day and creating a panda series
-temperatureSeries = temperatureDF.groupby(['Date'])['Temperature'].mean()
-
-#Concatenating Year, Month and Day columns to form one single column called Date
-windSpeedDF['Date'] = windSpeedDF['Year'].astype(str) + '-' + windSpeedDF['Month'].astype(str) + '-' + windSpeedDF['Day'].astype(str)
-windSpeedDF['Date'] = pd.to_datetime(windSpeedDF['Date'])
-del windSpeedDF['Year']
-del windSpeedDF['Month']
-del windSpeedDF['Day']
-del windSpeedDF['Hour']
-del windSpeedDF['Minute']
-
-#calculating mean of GHI for each day and creating a panda series
-windSpeedSeries = windSpeedDF.groupby(['Date'])['Wind Speed'].mean()
-
-#Model prediction for GHI
-# params_GHI = getParamspdq(ghiSeries)
-# rmse = get_model(params_GHI,ghiSeries,"GHI")
-rmse = get_model(((1, 1, 1), (0, 1, 1, 12)),ghiSeries,"GHI")
-print('The Root Mean Squared Error of our forecasts for GHI with current model is {}'.format(round(rmse, 2)))
+# #Concatenating Year, Month and Day columns to form one single column called Date
+# temperatureDF['Date'] = temperatureDF['Year'].astype(str) + '-' + temperatureDF['Month'].astype(str) + '-' + temperatureDF['Day'].astype(str)
+# temperatureDF['Date'] = pd.to_datetime(temperatureDF['Date'])
+# del temperatureDF['Year']
+# del temperatureDF['Month']
+# del temperatureDF['Day']
+# del temperatureDF['Hour']
+# del temperatureDF['Minute']
 #
-# #Model prediction for Temperature
-# params_Temperature = getParamspdq(temperatureSeries)
-# rmse = get_model(params_Temperature,temperatureSeries,"Temperature")
-rmse = get_model(((1, 0, 1), (0, 1, 1, 12)),temperatureSeries,"Temperature")
-print('The Root Mean Squared Error of our forecasts for Temperature with current model is {}'.format(round(rmse, 2)))
-
-# Model prediction for Wind Speed
-# params_WindSpeed = getParamspdq(windSpeedSeries)
-# print(params_WindSpeed)
-#rmse = get_model(params_WindSpeed,windSpeedSeries,"WindSpeed")
-rmse = get_model(((1, 0, 1), (0, 1, 1, 12)),windSpeedSeries,"WindSpeed")
-print('The Root Mean Squared Error of our forecasts for Temperature with current model is {}'.format(round(rmse, 2)))
+# #calculating mean of GHI for each day and creating a panda series
+# temperatureSeries = temperatureDF.groupby(['Date'])['Temperature'].mean()
+#
+# #Concatenating Year, Month and Day columns to form one single column called Date
+# windSpeedDF['Date'] = windSpeedDF['Year'].astype(str) + '-' + windSpeedDF['Month'].astype(str) + '-' + windSpeedDF['Day'].astype(str)
+# windSpeedDF['Date'] = pd.to_datetime(windSpeedDF['Date'])
+# del windSpeedDF['Year']
+# del windSpeedDF['Month']
+# del windSpeedDF['Day']
+# del windSpeedDF['Hour']
+# del windSpeedDF['Minute']
+#
+# #calculating mean of GHI for each day and creating a panda series
+# windSpeedSeries = windSpeedDF.groupby(['Date'])['Wind Speed'].mean()
+#
+# #Model prediction for GHI
+# # params_GHI = getParamspdq(ghiSeries)
+# # rmse = get_model(params_GHI,ghiSeries,"GHI")
+# rmse = get_model(((1, 1, 1), (0, 1, 1, 12)),ghiSeries,"GHI")
+# print('The Root Mean Squared Error of our forecasts for GHI with current model is {}'.format(round(rmse, 2)))
+# #
+# # #Model prediction for Temperature
+# # params_Temperature = getParamspdq(temperatureSeries)
+# # rmse = get_model(params_Temperature,temperatureSeries,"Temperature")
+# rmse = get_model(((1, 0, 1), (0, 1, 1, 12)),temperatureSeries,"Temperature")
+# print('The Root Mean Squared Error of our forecasts for Temperature with current model is {}'.format(round(rmse, 2)))
+#
+# # Model prediction for Wind Speed
+# # params_WindSpeed = getParamspdq(windSpeedSeries)
+# # print(params_WindSpeed)
+# #rmse = get_model(params_WindSpeed,windSpeedSeries,"WindSpeed")
+# rmse = get_model(((1, 0, 1), (0, 1, 1, 12)),windSpeedSeries,"WindSpeed")
+# print('The Root Mean Squared Error of our forecasts for Temperature with current model is {}'.format(round(rmse, 2)))
 
 # pred_uc = results.get_forecast(steps = 500)
 # pred_ci = pred_uc.conf_int()
