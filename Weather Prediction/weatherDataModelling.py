@@ -5,6 +5,7 @@ import itertools
 import numpy as np
 import warnings
 import math
+import pdb
 
 def removeOutliers(SomeSeries):
     mean = SomeSeries.mean()
@@ -95,32 +96,71 @@ for i in range(2001,2011):
 df = pd.concat(list_)
 
 #Splitting into 3 dataframes ghiDF, temperatureDF, windSpeedDF
-#dfdshlfhdslkhfkldshflkdshflk
+
 ghiDF = df.iloc[:,0:6]
-
-temperatureDF = df.iloc[:,0:7]
-del temperatureDF['GHI']
-
-windSpeedDF = df.iloc[:,0:8]
-del windSpeedDF['GHI']
-del windSpeedDF['Temperature']
-
-#Removing rows from ghiDF with 0 GHI value
 ghiDF = ghiDF[ghiDF.GHI!=0]
+tempGHIDF = pd.DataFrame(columns=['Year', 'Month', 'Day', 'Hour', 'Minute', 'GHI'])
 
-#Concatenating Year, Month and Day columns to form one single column called Date
-ghiDF['Date'] = ghiDF['Year'].astype(str) + '-' + ghiDF['Month'].astype(str) + '-' + ghiDF['Day'].astype(str)
-ghiDF['Date'] = pd.to_datetime(ghiDF['Date'])
-del ghiDF['Year']
-del ghiDF['Month']
-del ghiDF['Day']
-del ghiDF['Hour']
-del ghiDF['Minute']
+# meanGHI = ghiDF.groupby(['Year','Month'])['GHI'].mean()
+# sdGHI = ghiDF.groupby(['Year','Month'])['GHI'].std()
 
-#calculating mean of GHI for each day and creating a panda series
-ghiSeries = ghiDF.groupby(['Date'])['GHI'].mean()
 
-ghiSeries = removeOutliers(ghiSeries)
+#print(ghiDF.iloc[0])
+
+#print(meanGHI.loc[meanGHI['Year'] == 2005, 'GHI'].iloc[0])
+
+all_res = []
+
+ghiDF_mean = pd.DataFrame({'mean_t':ghiDF.groupby(['Year','Month'])['GHI'].mean()}).reset_index()
+ghiDF_std = pd.DataFrame({'std_t':ghiDF.groupby(['Year','Month'])['GHI'].std()}).reset_index()
+ghiDF_mean_std = pd.merge(ghiDF_mean,ghiDF_std,how='inner',left_on=['Year','Month'],right_on=['Year','Month'])
+ghiDF_final = pd.merge(ghiDF,ghiDF_mean_std,how='left',left_on=['Year','Month'],right_on=['Year','Month'])
+def funk(row):
+    #pdb.set_trace()
+    if (float(row.GHI) > (row.mean_t - row.std_t)) & (float(row.GHI) < (row.mean_t + row.std_t)):
+        return 1
+    else:
+        return 0
+
+ghiDF_final['bool'] = ghiDF_final.apply(lambda row: funk(row) , axis=1)
+pdb.set_trace()
+
+# for i in range(0, len(ghiDF)):
+#     year = ghiDF.iloc[i]['Year']
+#     month = ghiDF.iloc[i]['Month']
+#     ghi = ghiDF.iloc[i]['GHI']
+#     mean = meanGHI.loc[year].loc[month]
+#     sd = sdGHI.loc[year].loc[month]
+#     pdb.set_trace()
+    #tempGHIDF = ghiDF[ghiDF.Year == year & ghiDF.Month == month & ghi > mean - sd & ghi < mean + sd]
+    #ghiDF_filter = ghiDF[ (ghiDF['Year']== year) &  ]
+
+print(tempGHIDF)
+
+
+# temperatureDF = df.iloc[:,0:7]
+# del temperatureDF['GHI']
+#
+# windSpeedDF = df.iloc[:,0:8]
+# del windSpeedDF['GHI']
+# del windSpeedDF['Temperature']
+#
+# #Removing rows from ghiDF with 0 GHI value
+# ghiDF = ghiDF[ghiDF.GHI!=0]
+#
+# #Concatenating Year, Month and Day columns to form one single column called Date
+# ghiDF['Date'] = ghiDF['Year'].astype(str) + '-' + ghiDF['Month'].astype(str) + '-' + ghiDF['Day'].astype(str)
+# ghiDF['Date'] = pd.to_datetime(ghiDF['Date'])
+# del ghiDF['Year']
+# del ghiDF['Month']
+# del ghiDF['Day']
+# del ghiDF['Hour']
+# del ghiDF['Minute']
+#
+# #calculating mean of GHI for each day and creating a panda series
+# ghiSeries = ghiDF.groupby(['Date'])['GHI'].mean()
+#
+# ghiSeries = removeOutliers(ghiSeries)
 
 # #Concatenating Year, Month and Day columns to form one single column called Date
 # temperatureDF['Date'] = temperatureDF['Year'].astype(str) + '-' + temperatureDF['Month'].astype(str) + '-' + temperatureDF['Day'].astype(str)
@@ -181,8 +221,8 @@ ghiSeries = removeOutliers(ghiSeries)
 # plt.show()
 #print(ghiSeries.head(20))
 # line plot of dataset
-ghiSeries.plot()
-plt.legend()
+#ghiSeries.plot()
+#plt.legend()
 # temperatureSeries.plot()
 # windSpeedSeries.plot()
-plt.show()
+#plt.show()
