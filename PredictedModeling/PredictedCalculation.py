@@ -59,7 +59,7 @@ for row in data:
 Ttrc = 25
 Gtrc = 1
 a = -3.47
-b = -0.0594
+b = -0.059400
 dTcond = 3
 Ppredvals = [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ']
 for j in range(1, 3):

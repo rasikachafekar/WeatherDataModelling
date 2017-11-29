@@ -7,13 +7,63 @@ import warnings
 import math
 import pdb
 
-def removeOutliers(SomeSeries):
-    mean = SomeSeries.mean()
-    sd = SomeSeries.std()
-    final_list = [x for x in SomeSeries if (x > mean - 2 * sd)]
-    final_list = [x for x in final_list if (x < mean + 2 * sd)]
-    return pd.Series(final_list)
+def removeOutliers(SomeDF):
+    paramColumnName = SomeDF.columns[5]
+    SomeDF_mean = pd.DataFrame({'mean_t': SomeDF.groupby(['Year', 'Month'])[paramColumnName].mean()}).reset_index()
+    SomeDF_std = pd.DataFrame({'std_t': SomeDF.groupby(['Year', 'Month'])[paramColumnName].std()}).reset_index()
+    SomeDF_mean_std = pd.merge(SomeDF_mean, SomeDF_std, how='inner', left_on=['Year', 'Month'], right_on=['Year', 'Month'])
+    SomeDF_final = pd.merge(SomeDF, SomeDF_mean_std, how='left', left_on=['Year', 'Month'], right_on=['Year', 'Month'])
 
+    def funk(row):
+        # pdb.set_trace()
+        if (float(row.iloc[5]) > (row.mean_t - row.std_t)) & (float(row.iloc[5]) < (row.mean_t + row.std_t)):
+            return 1
+        else:
+            return 0
+
+    SomeDF_final['bool'] = SomeDF_final.apply(lambda row: funk(row), axis=1)
+    SomeDF_final = SomeDF_final[SomeDF_final["bool"] == 1]
+
+    SomeDF_final['Date'] = SomeDF_final['Year'].astype(str) + '-' + SomeDF_final['Month'].astype(str) + '-' + SomeDF_final['Day'].astype(str)
+    SomeDF_final['Date'] = pd.to_datetime(SomeDF_final['Date'])
+    del SomeDF_final['Year']
+    del SomeDF_final['Month']
+    del SomeDF_final['Day']
+    del SomeDF_final['Hour']
+    del SomeDF_final['Minute']
+    del SomeDF_final['mean_t']
+    del SomeDF_final['std_t']
+    del SomeDF_final['bool']
+    SomeDF_final = SomeDF_final.set_index('Date')
+    # print(SomeDF_final)
+    SomeSeries = SomeDF_final.groupby(['Date'])[paramColumnName].mean()
+    # print (SomeSeries.index.freq)
+    # print(SomeDF_final.describe())
+    # SomeSeries = SomeDF_final.groupby(['Date'])['GHI'].mean()
+    # print(SomeSeries.describe() )
+    # SomeSeriesIndexed = SomeSeries.set_index('Date')
+    SomeSeries.index = add_freq(SomeSeries, freq = 'D')
+    # print(SomeSeries.index.freq)
+    # pdb.set_trace()
+
+    return SomeSeries
+def add_freq(idx, freq=None):
+    """Add a frequency attribute to idx, through inference or directly.
+
+    Returns a copy.  If `freq` is None, it is inferred.
+    """
+
+    idx = idx.copy()
+    if freq is None:
+        if idx.index.freq is None:
+            freq = pd.infer_freq(idx.index)
+        else:
+            return idx
+    idx.index.freq = pd.tseries.frequencies.to_offset(freq)
+    if idx.index.freq is None:
+        raise AttributeError('no discernible frequency found to `idx`.  Specify'
+                             ' a frequency string with `freq`.')
+    return idx.index
 def getParamspdq(SomeSeries) :
     p = d = q = range(0, 2)
     pdq = list(itertools.product(p, d, q))
@@ -45,9 +95,12 @@ def getParamspdq(SomeSeries) :
             except:
                 continue
     return params
-
-
 def get_model(params, SomeSeries, colString):
+    SomeSeries.reindex()
+    print('___________________######################_________________')
+    print(SomeSeries.index.freq)
+    print('___________________######################_________________')
+
     mod = sm.tsa.statespace.SARIMAX(SomeSeries,
                                         order=params[0],
                                         seasonal_order=params[1],
@@ -55,15 +108,18 @@ def get_model(params, SomeSeries, colString):
                                         enforce_invertibility=False)
 
     results = mod.fit()
+    print(type(results))
 
+    results.save('test')
+    # results.save(SomeSeries.name+'.pkl')
     # print(results.summary().tables[1])
 
     # results.plot_diagnostics(figsize=(15,12))
     # plt.show()
 
     pred = results.get_prediction(start=pd.to_datetime('2010-01-01'), dynamic=False)
-    pred_ci = pred.conf_int()
-
+    # pred_ci = pred.conf_int()
+    #
     # ax = SomeSeries['2005':].plot(label='observed')
     # pred.predicted_mean.plot(ax=ax, label='One-step ahead Forecast', alpha=.7)
     #
@@ -74,14 +130,34 @@ def get_model(params, SomeSeries, colString):
     # ax.set_xlabel('Date')
     # ax.set_ylabel(colString)
     # plt.legend()
-
+    #
     # plt.show()
-
+    # pdb.set_trace()
     forecasted = pred.predicted_mean
     truth = SomeSeries['2010-01-01':]
 
-    print(truth)
-    print(forecasted)
+    # print(truth)
+    # print(forecasted)
+    # pred_uc = results.get_forecast(steps=100)
+    # print(results.summary())
+    # pdb.set_trace()
+    # pred_uc = results.get_forecast(SomeSeries.last_valid_index() + pd.DateOffset(1))
+    pred_uc = results.get_forecast(steps=365)
+    #
+    # print(forecasted.head())
+    # print(SomeSeries['GHI'].head())
+    # pred_uc = results.get_forecast('2014-10-12')
+    # pred_ci = pred_uc.conf_int()
+    # ax = SomeSeries.plot(label='observed', figsize=(20, 15))
+    # pred_uc.predicted_mean.plot(ax=ax, label='Forecast')
+    # ax.fill_between(pred_ci.index,
+    #                 pred_ci.iloc[:, 0],
+    #                 pred_ci.iloc[:, 1], color='k', alpha=.25)
+    # ax.set_xlabel('Date')
+    # ax.set_ylabel('GHI')
+    #
+    # plt.legend()
+    # plt.show()
 
     # Compute the mean square error
     rmse = math.sqrt(((forecasted - truth) ** 2).mean())
@@ -97,106 +173,34 @@ df = pd.concat(list_)
 
 #Splitting into 3 dataframes ghiDF, temperatureDF, windSpeedDF
 
-ghiDF = df.iloc[:,0:6]
-ghiDF = ghiDF[ghiDF.GHI!=0]
-tempGHIDF = pd.DataFrame(columns=['Year', 'Month', 'Day', 'Hour', 'Minute', 'GHI'])
+# ghiDF = df.iloc[:,0:6]
+# ghiDF = ghiDF[ghiDF.GHI!=0]
 
-# meanGHI = ghiDF.groupby(['Year','Month'])['GHI'].mean()
-# sdGHI = ghiDF.groupby(['Year','Month'])['GHI'].std()
-
-
-#print(ghiDF.iloc[0])
-
-#print(meanGHI.loc[meanGHI['Year'] == 2005, 'GHI'].iloc[0])
-
-all_res = []
-
-ghiDF_mean = pd.DataFrame({'mean_t':ghiDF.groupby(['Year','Month'])['GHI'].mean()}).reset_index()
-ghiDF_std = pd.DataFrame({'std_t':ghiDF.groupby(['Year','Month'])['GHI'].std()}).reset_index()
-ghiDF_mean_std = pd.merge(ghiDF_mean,ghiDF_std,how='inner',left_on=['Year','Month'],right_on=['Year','Month'])
-ghiDF_final = pd.merge(ghiDF,ghiDF_mean_std,how='left',left_on=['Year','Month'],right_on=['Year','Month'])
-def funk(row):
-    #pdb.set_trace()
-    if (float(row.GHI) > (row.mean_t - row.std_t)) & (float(row.GHI) < (row.mean_t + row.std_t)):
-        return 1
-    else:
-        return 0
-
-ghiDF_final['bool'] = ghiDF_final.apply(lambda row: funk(row) , axis=1)
-pdb.set_trace()
-
-# for i in range(0, len(ghiDF)):
-#     year = ghiDF.iloc[i]['Year']
-#     month = ghiDF.iloc[i]['Month']
-#     ghi = ghiDF.iloc[i]['GHI']
-#     mean = meanGHI.loc[year].loc[month]
-#     sd = sdGHI.loc[year].loc[month]
-#     pdb.set_trace()
-    #tempGHIDF = ghiDF[ghiDF.Year == year & ghiDF.Month == month & ghi > mean - sd & ghi < mean + sd]
-    #ghiDF_filter = ghiDF[ (ghiDF['Year']== year) &  ]
-
-print(tempGHIDF)
-
-
-# temperatureDF = df.iloc[:,0:7]
-# del temperatureDF['GHI']
-#
+# ghiSeries = removeOutliers(ghiDF)
+# print(ghiSeries.head())
+temperatureDF = df.iloc[:,0:7]
+del temperatureDF['GHI']
+temperatureSeries = removeOutliers(temperatureDF)
+print(temperatureSeries.last_valid_index() + pd.DateOffset(1))
+# print(temperatureSeries.name)
+# print(temperatureSeries.head())
 # windSpeedDF = df.iloc[:,0:8]
 # del windSpeedDF['GHI']
 # del windSpeedDF['Temperature']
-#
-# #Removing rows from ghiDF with 0 GHI value
-# ghiDF = ghiDF[ghiDF.GHI!=0]
-#
-# #Concatenating Year, Month and Day columns to form one single column called Date
-# ghiDF['Date'] = ghiDF['Year'].astype(str) + '-' + ghiDF['Month'].astype(str) + '-' + ghiDF['Day'].astype(str)
-# ghiDF['Date'] = pd.to_datetime(ghiDF['Date'])
-# del ghiDF['Year']
-# del ghiDF['Month']
-# del ghiDF['Day']
-# del ghiDF['Hour']
-# del ghiDF['Minute']
-#
-# #calculating mean of GHI for each day and creating a panda series
-# ghiSeries = ghiDF.groupby(['Date'])['GHI'].mean()
-#
-# ghiSeries = removeOutliers(ghiSeries)
-
-# #Concatenating Year, Month and Day columns to form one single column called Date
-# temperatureDF['Date'] = temperatureDF['Year'].astype(str) + '-' + temperatureDF['Month'].astype(str) + '-' + temperatureDF['Day'].astype(str)
-# temperatureDF['Date'] = pd.to_datetime(temperatureDF['Date'])
-# del temperatureDF['Year']
-# del temperatureDF['Month']
-# del temperatureDF['Day']
-# del temperatureDF['Hour']
-# del temperatureDF['Minute']
-#
-# #calculating mean of GHI for each day and creating a panda series
-# temperatureSeries = temperatureDF.groupby(['Date'])['Temperature'].mean()
-#
-# #Concatenating Year, Month and Day columns to form one single column called Date
-# windSpeedDF['Date'] = windSpeedDF['Year'].astype(str) + '-' + windSpeedDF['Month'].astype(str) + '-' + windSpeedDF['Day'].astype(str)
-# windSpeedDF['Date'] = pd.to_datetime(windSpeedDF['Date'])
-# del windSpeedDF['Year']
-# del windSpeedDF['Month']
-# del windSpeedDF['Day']
-# del windSpeedDF['Hour']
-# del windSpeedDF['Minute']
-#
-# #calculating mean of GHI for each day and creating a panda series
-# windSpeedSeries = windSpeedDF.groupby(['Date'])['Wind Speed'].mean()
-#
-# #Model prediction for GHI
-# # params_GHI = getParamspdq(ghiSeries)
-# # rmse = get_model(params_GHI,ghiSeries,"GHI")
+# print(windSpeedDF.head())
+#Model prediction for GHI
+# params_GHI = getParamspdq(ghiSeries)
+# print(params_GHI)
+# rmse = get_model(params_GHI,ghiSeries,"GHI")
 # rmse = get_model(((1, 1, 1), (0, 1, 1, 12)),ghiSeries,"GHI")
+# rmse = get_model(((1, 1, 1), (0, 1, 1, 12)),ghiSeries,ghiSeies.name)
 # print('The Root Mean Squared Error of our forecasts for GHI with current model is {}'.format(round(rmse, 2)))
 # #
 # # #Model prediction for Temperature
 # # params_Temperature = getParamspdq(temperatureSeries)
 # # rmse = get_model(params_Temperature,temperatureSeries,"Temperature")
-# rmse = get_model(((1, 0, 1), (0, 1, 1, 12)),temperatureSeries,"Temperature")
-# print('The Root Mean Squared Error of our forecasts for Temperature with current model is {}'.format(round(rmse, 2)))
+rmse = get_model(((1, 0, 1), (0, 1, 1, 12)),temperatureSeries,"Temperature")
+print(rmse)
 #
 # # Model prediction for Wind Speed
 # # params_WindSpeed = getParamspdq(windSpeedSeries)
@@ -204,21 +208,9 @@ print(tempGHIDF)
 # #rmse = get_model(params_WindSpeed,windSpeedSeries,"WindSpeed")
 # rmse = get_model(((1, 0, 1), (0, 1, 1, 12)),windSpeedSeries,"WindSpeed")
 # print('The Root Mean Squared Error of our forecasts for Temperature with current model is {}'.format(round(rmse, 2)))
+#
+#
 
-# pred_uc = results.get_forecast(steps = 500)
-# pred_ci = pred_uc.conf_int()
-#
-#
-# ax = ghiSeries.plot(label='observed', figsize=(20, 15))
-# pred_uc.predicted_mean.plot(ax=ax, label='Forecast')
-# ax.fill_between(pred_ci.index,
-#                 pred_ci.iloc[:, 0],
-#                 pred_ci.iloc[:, 1], color='k', alpha=.25)
-# ax.set_xlabel('Date')
-# ax.set_ylabel('GHI')
-#
-# plt.legend()
-# plt.show()
 #print(ghiSeries.head(20))
 # line plot of dataset
 #ghiSeries.plot()
