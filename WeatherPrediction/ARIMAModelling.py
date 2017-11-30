@@ -4,7 +4,8 @@ import statsmodels.api as sm
 import itertools
 import numpy as np
 import warnings
-
+from ast import literal_eval
+import pdb
 
 
 def get_params_pdq(SomeSeries) :
@@ -61,18 +62,33 @@ def predict_values(params, SomeSeries):
 
     results = mod.fit()
 
-    pred_uc = results.get_forecast(SomeSeries.last_valid_index() + pd.DateOffset(1))
+    pred_uc = results.get_forecast(steps=365)
 
     # Not sure if we need to calculate rmse.
     # rmse = math.sqrt(((forecasted - truth) ** 2).mean())
-    return pred_uc.predicted_mean
+    preds = pred_uc.predicted_mean
+    pred_df = pd.DataFrame({'date': preds.index, SomeSeries.name: preds.values})
+    pred_df.index = pred_df['date']
+    pred_df = pred_df.resample('M').mean()
+    pred_df.to_csv(pred_df.columns[0] + '.csv', index=True, header=True)
+
+    return pred_df
 
 
 def save_params(params):
     df = pd.DataFrame(params)
-    df.to_csv('test.csv', index=False, header=False)
+    df.to_csv('params.csv', index=False, header=False)
 
 
 def get_params(SomeSeries):
     df = pd.read_csv('test.csv', header=None)
-    return df.loc[df[0] == SomeSeries.name].iloc[0][1]
+    param_string = df.loc[df[0] == SomeSeries.name].iloc[0][1]
+    param_tuple = literal_eval(param_string)
+    return param_tuple
+
+
+def get_predicted_values(SeriesName):
+    df = pd.read_csv(SeriesName+'.csv')
+    return df
+
+
