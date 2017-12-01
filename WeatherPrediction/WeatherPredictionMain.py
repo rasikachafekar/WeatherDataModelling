@@ -1,6 +1,7 @@
 import GetAndCleanData as gc
-import ARIMAModelling as am
+# import ARIMAModelling as am
 import pdb
+# import datetim
 
 # Generate Time Series
 # TimeSeries = gc.fetchDataAndCleanData()
@@ -31,9 +32,9 @@ import pdb
 # tempPred = am.predict_values(temperatureParams, temperatureSeries)
 # windPred = am.predict_values(windParams, windSeries)
 
-ghiPred = am.get_predicted_values('GHI')
-print(ghiPred)
+# ghiPred = am.get_predicted_values('GHI')
+# print(ghiPred)
 # print(tempPred)
 # print(windPred)
 
-
+pdb.set_trace()

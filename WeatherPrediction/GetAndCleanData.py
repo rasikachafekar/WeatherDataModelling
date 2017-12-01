@@ -95,7 +95,7 @@ def fetchDataAndCleanData():
     return [ghiSeries, temperatureSeries, windSpeedSeries]
 
 
-def fetchDataNOAA():
+def fetchDataNOAA(zipcode):
 
     #TODO: API call to NOAA or NREL will go here
 

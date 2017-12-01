@@ -2,8 +2,20 @@ import pandas as pd
 from urllib.request import Request, urlopen
 import csv
 import datetime
+import json
+import pdb
 
-lat, lon = 33.4255104, -111.9400054
+
+zipcode = 85281
+lat_long_api = "http://maps.googleapis.com/maps/api/geocode/json?address="+str(zipcode)
+page = urlopen(lat_long_api)
+req = Request(lat_long_api, headers={'User-Agent': 'Mozilla/5.0'})
+content = json.loads(page.read().decode())
+# pdb.set_trace()
+lat_long = content["results"][0]["geometry"]["location"]
+lat = lat_long["lat"]
+lon = lat_long["lng"]
+
 
 api_key = '3KEle87nPOrTBNXBVWeXqChGztQm0pvTLbepwVwW'
 
