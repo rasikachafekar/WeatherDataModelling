@@ -1,5 +1,6 @@
 import pandas as pd
 from urllib.request import Request, urlopen
+from urllib import error
 import csv
 import datetime
 import json
@@ -12,7 +13,7 @@ def get_csv_by_year(startyear,endyear):
         print(url)
         try:
             page = urlopen(url)
-        except urllib.error.HTTPError:
+        except error.HTTPError:
             print("Exception occured ! Starting now from "+year)
             get_csv_by_year(year, endyear)
         req = Request(url,headers={'User-Agent': 'Mozilla/5.0'})
@@ -21,8 +22,9 @@ def get_csv_by_year(startyear,endyear):
         weatherCSV.write(content)
 
 zipcode = 85281
-location="Chicago"
-lat_long_api="https://maps.googleapis.com/maps/api/geocode/json?address="+location
+city="Tempe"
+state="Arizona"
+lat_long_api="https://maps.googleapis.com/maps/api/geocode/json?address="+city+","+state
 #lat_long_api = "http://maps.googleapis.com/maps/api/geocode/json?address="+str(zipcode)
 page = urlopen(lat_long_api)
 req = Request(lat_long_api, headers={'User-Agent': 'Mozilla/5.0'})
