@@ -97,6 +97,6 @@ def fetchDataNOAA(location):
           reason=reason_for_use,
           api=api_key,
           attr=attributes)
-    get_csv_by_year(year-15, year, url, location)
-    pt.build_model(location)
+    get_csv_by_year(year-15, year, url, str(location))
+    pt.build_model(str(location))
 
