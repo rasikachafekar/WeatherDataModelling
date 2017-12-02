@@ -185,7 +185,7 @@ def cleanData(location):
             tempDF = pd.read_csv(location+"/Datasets/" + file, skiprows=2)
             # print(tempDF)
             df = df.append(tempDF)
-        except pd.errors.EmptyDataError:
+        except pd.errors:
             continue
 
     # Splitting into 3 dataframes ghiDF, temperatureDF, windSpeedDF
@@ -241,3 +241,18 @@ def get_city_and_state(location_id):
     else:
         return -1
 
+
+def fetch_predicted_values(location):
+    dfList = []
+    if os.path.isdir(location+'/Predicted Values/') is True:
+        for file in files(location+'/Predicted Values'):
+            try:
+                tempDF = pd.read_csv(location+"/Predicted Values/" + file)
+                dfList.append(tempDF)
+            except pd.errors:
+                continue
+        # pdb.set_trace()
+        predicted_values = (list(dfList[0]['GHI']), list(dfList[1]['Temperature']), list(dfList[2]['Wind Speed']))
+        return predicted_values
+    else:
+        return []

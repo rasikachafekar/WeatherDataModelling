@@ -1,4 +1,3 @@
-import pandas as pd
 import datetime
 import json
 from urllib.request import Request, urlopen
@@ -7,9 +6,9 @@ import os
 import PredictionTools as pt
 
 
-def get_predicted_values(SeriesName, location):
-    df = pd.read_csv(location+'/Predicted Values/'+SeriesName+'.csv')
-    return df
+def get_predicted_values(location):
+    predicted_values = pt.fetch_predicted_values(str(location))
+    return predicted_values
 
 
 def fetchDataNOAA(location):
