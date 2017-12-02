@@ -7,9 +7,6 @@ from ast import literal_eval
 import pymysql as pm
 
 
-import pdb
-
-
 def get_params_pdq(SomeSeries):
     """
     Generates optimal p,d,q values for the input series.
@@ -243,16 +240,17 @@ def get_city_and_state(location_id):
 
 
 def fetch_predicted_values(location):
-    dfList = []
+    dfDict = {}
+    fileList = []
     if os.path.isdir(location+'/Predicted Values/') is True:
         for file in files(location+'/Predicted Values'):
             try:
                 tempDF = pd.read_csv(location+"/Predicted Values/" + file)
-                dfList.append(tempDF)
-            except pd.errors:
+                param = file.split('.')[0]
+                fileList.append(param)
+                dfDict[param] = list(tempDF[param])
+            except:
                 continue
-        # pdb.set_trace()
-        predicted_values = (list(dfList[0]['GHI']), list(dfList[1]['Temperature']), list(dfList[2]['Wind Speed']))
-        return predicted_values
+        return dfDict
     else:
-        return []
+        return {}
